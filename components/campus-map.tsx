@@ -148,6 +148,17 @@ const mapOptions = {
       stylers: [{ visibility: "off" }],
     },
   ],
+  //49.282569, -123.275719
+  //49.236203, -123.195687
+  restriction: {
+    latLngBounds: {
+      north: 49.292569,
+      south: 49.236203,
+      east: -123.195687,
+      west: -123.285719,
+    },
+    strictBounds: true,
+  },
 }
 
 export function CampusMap() {
