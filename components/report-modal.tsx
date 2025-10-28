@@ -36,6 +36,7 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
   /* Add report submission to subabase database
   */
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("Submitting report:", { issueType, description });
     e.preventDefault();
 
     try {
