@@ -10,23 +10,21 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { UtilityDetail } from "@/components/utility-detail"
 import { ReportModal } from "@/components/report-modal"
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api"
+import { Data, GoogleMap, LoadScript, Marker } from "@react-google-maps/api"
+import { mockUtilities, Utility, UtilityType } from "@/components/utility-list"
+import { createClient } from '@supabase/supabase-js';
 
-// Defines what types of utilities are available and their structure
-type UtilityType = "water" | "bike" | "washroom" | "emergency" | "food" | "charging"
 
-// Defines Utility data structure
-interface Utility {
-  id: string
-  name: string
-  type: UtilityType
-  building: string
-  floor: string
-  position: { lat: number; lng: number }
-  status: "working" | "reported" | "maintenance"
-  reports: number
-  lastChecked: string
+// Setup supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase URL or Key is missing in environment variables.");
 }
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
 
 // Categories for filtering utilities 
 const categories = [
@@ -38,99 +36,7 @@ const categories = [
   { id: "charging", label: "Charging Stations", icon: Zap, color: "text-yellow-400" },
 ]
 
-// Mock data for utilities on campus
-// This is basically just a list of all the utilities with their details
-// Eg: water foundtain in ICICS, bike cage in main mall, etc.
-const mockUtilities: Utility[] = [
-  {
-    id: "1",
-    name: "Water Fountain",
-    type: "water",
-    building: "ICICS",
-    floor: "2nd Floor",
-    position: { lat: 49.2611, lng: -123.2489 },
-    status: "working",
-    reports: 0,
-    lastChecked: "2 hours ago",
-  },
-  {
-    id: "2",
-    name: "Bike Cage",
-    type: "bike",
-    building: "Main Mall",
-    floor: "Ground",
-    position: { lat: 49.2606, lng: -123.246 },
-    status: "working",
-    reports: 0,
-    lastChecked: "1 day ago",
-  },
-  {
-    id: "3",
-    name: "Accessible Washroom",
-    type: "washroom",
-    building: "Nest",
-    floor: "1st Floor",
-    position: { lat: 49.2667, lng: -123.25 },
-    status: "working",
-    reports: 0,
-    lastChecked: "3 hours ago",
-  },
-  {
-    id: "4",
-    name: "Emergency Phone",
-    type: "emergency",
-    building: "Library",
-    floor: "Outside",
-    position: { lat: 49.2677, lng: -123.2563 },
-    status: "working",
-    reports: 0,
-    lastChecked: "1 week ago",
-  },
-  {
-    id: "5",
-    name: "Water Bottle Refill",
-    type: "water",
-    building: "ESB",
-    floor: "1st Floor",
-    position: { lat: 49.2625, lng: -123.2492 },
-    status: "reported",
-    reports: 2,
-    lastChecked: "5 hours ago",
-  },
-  {
-    id: "6",
-    name: "Bike Repair Station",
-    type: "bike",
-    building: "Student Union",
-    floor: "Outside",
-    position: { lat: 49.265, lng: -123.2515 },
-    status: "working",
-    reports: 0,
-    lastChecked: "2 days ago",
-  },
-  {
-    id: "7",
-    name: "Coffee Shop",
-    type: "food",
-    building: "Life Sciences",
-    floor: "Ground",
-    position: { lat: 49.2638, lng: -123.2528 },
-    status: "working",
-    reports: 0,
-    lastChecked: "1 hour ago",
-  },
-  {
-    id: "8",
-    name: "Charging Station",
-    type: "charging",
-    building: "Nest",
-    floor: "2nd Floor",
-    position: { lat: 49.2668, lng: -123.2498 },
-    status: "working",
-    reports: 0,
-    lastChecked: "4 hours ago",
-  },
-]
+
 
 // Map container style and options
 const mapContainerStyle = {
@@ -190,6 +96,19 @@ export function CampusMap() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [utilities, setUtilities] = useState<Utility[]>([])
+
+
+  const getUserLocationIcon = () => {
+    if (!window.google?.maps) return undefined;
+  
+    return {
+      url: "/location_icon.png",
+      scaledSize: new window.google.maps.Size(32, 32),
+      anchor: new window.google.maps.Point(16, 16),
+    };
+  };
+
 
   // Get user's location on component mount
   useEffect(() => {
@@ -211,6 +130,45 @@ export function CampusMap() {
     }
   }, [])
 
+
+  useEffect(() => {
+    console.log("Utilities updated with report counts");
+    updateUtilitiesWithReports();
+  }, [])
+
+// Updates the utilitites with the number of reports from the database
+const updateUtilitiesWithReports = async () => {
+  try {
+    // Fetch all reports
+    const { data: reports, error } = await supabase
+      .from("reports")
+      .select("util_id");
+    console.log("Fetched reports:", reports);
+    if (error) {
+      console.error("Error fetching reports:", error);
+      return;
+    }
+
+    // Count number of reports per utility
+    const counts = reports?.reduce((acc, r) => {
+      acc[r.util_id] = (acc[r.util_id] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log("Report counts:", counts, reports);
+
+    // Update utilities state with report counts
+    setUtilities(mockUtilities.map(u => ({
+      ...u,
+      reports: counts?.[u.id] || 0,
+      status: counts?.[u.id] ? "reported" : "working" // update marker color
+
+    })));
+  } catch (err) {
+    console.error("Unexpected error updating utilities:", err);
+  }
+};
+  
+
   // Toggle category selection for filtering
   // If category is already selected, remove it; otherwise, add it
   // why am I even commenting this lmao (auto-suggested comment btw I had to include it)
@@ -223,14 +181,15 @@ export function CampusMap() {
   // Filter utilities based on selected categories and search query
   // Checks if the utility type is in selected categories and if the name or building includes the search query
   // Only checks the search if the search query is not empty
-  const filteredUtilities = mockUtilities.filter(
-    (utility) =>
-      selectedCategories.includes(utility.type) &&
+  const filteredUtilities = utilities.filter(
+    (u) =>
+      selectedCategories.includes(u.type) &&
       (searchQuery === "" ||
-        utility.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        utility.building.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
-
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.building.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+  
+  
   const getCategoryColor = (type: UtilityType) => {
     return categories.find((cat) => cat.id === type)?.color || "text-gray-400"
   }
@@ -248,7 +207,8 @@ export function CampusMap() {
     }
 
     // Get color based on utility status
-    const baseColor = utility.status === "reported" ? "#ef4444" : "#3b82f6"
+    //const baseColor = utility.status === "reported" ? "#ef4444" : "#3b82f6"
+    const baseColor = utility.status === "reported" ? "#FFA500" : "#3b82f6"
 
     return {
       path: window.google.maps.SymbolPath.CIRCLE,
@@ -259,6 +219,22 @@ export function CampusMap() {
       scale: selectedUtility?.id === utility.id ? 12 : 8,
     }
   }
+
+  const updateUtil = async (utility: Utility) => {
+    const { data, error } = await supabase
+      .from("reports")
+      .select("reports")
+      .eq("id", utility.id)
+      .single()
+  
+    if (error) {
+      console.error("Error fetching utility:", error)
+      return
+    }
+  
+    return { ...utility, reports: data.reports }
+  }
+  
 
 
   // Handle what happens when a utility is selected
@@ -409,16 +385,7 @@ export function CampusMap() {
         {userLocation && (
           <Marker
             position={userLocation}
-            icon={{
-              url: "/location_icon.png",
-              scaledSize: new window.google.maps.Size(32, 32),
-              anchor: new window.google.maps.Point(16, 16),
-              //fillColor: "#34D399",
-              //fillOpacity: 1,
-              //strokeColor: "#ffffff",
-              //strokeWeight: 2,
-              //scale: 8,
-            }}
+            icon={getUserLocationIcon()}
             title="You are here"
           />
         )}
@@ -433,8 +400,8 @@ export function CampusMap() {
               //setSelectedUtility(utility)
             }}
             icon={getMarkerIcon(utility)}
-            title={utility.name}
-          />
+            title={`${utility.name} - ${utility.reports} reports`}
+            />
         ))}
 
 

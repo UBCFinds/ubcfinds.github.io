@@ -69,10 +69,13 @@ export function UtilityDetail({ utility, onClose, onReport }: UtilityDetailProps
             </Badge>
           )}
           {utility.status === "reported" && (
-            <Badge variant="destructive">
+            <Badge
+              className="bg-[#FFA500]/20 text-[#FFA500] border border-[#FFA500]/40"
+            >
               {utility.reports} Issue{utility.reports > 1 ? "s" : ""} Reported
             </Badge>
           )}
+
           {utility.status === "maintenance" && (
             <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">
               Under Maintenance
@@ -88,14 +91,15 @@ export function UtilityDetail({ utility, onClose, onReport }: UtilityDetailProps
         </div>
 
         {utility.status === "reported" && (
-          <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+          <div className={`p-3 rounded-lg border ${utility.status === "reported" ? "bg-[#FFA500]/10 border-[#FFA500]/20" : "bg-destructive/10 border-destructive/20"}`}>
             <div className="flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-destructive mt-0.5" />
-              <div className="text-xs text-destructive">
+              <AlertTriangle className={`h-4 w-4 mt-0.5 ${utility.status === "reported" ? "text-[#FFA500]" : "text-destructive"}`} />
+              <div className={`text-xs ${utility.status === "reported" ? "text-[#FFA500]" : "text-destructive"}`}>
                 <p className="font-medium">Recent reports indicate this utility may not be working properly.</p>
               </div>
             </div>
           </div>
+
         )}
 
         <div className="space-y-2">

@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 import { createClient } from '@supabase/supabase-js';
 import { id } from "date-fns/locale"
+import { set } from "date-fns"
 //import { supabase } from "@/supabaseClient"; // Import the Supabase client
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -24,7 +25,7 @@ if (!supabaseUrl || !supabaseKey) {
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface ReportModalProps {
-  utility: { name: string; building: string } | null
+  utility: { name: string; building: string; id: string } | null
   onClose: () => void
 }
 
@@ -33,18 +34,20 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
   const [description, setDescription] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [showReportModal, setShowReportModal] = useState(true); // Added state to control modal visibility
+  const [submitting, setSubmitting] = useState(false);
 
   /* Add report submission to subabase database
   */
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log("Submitting report:", { issueType, description });
+    //console.log("Submitting report:", { issueType, description,  utility.name});
+    setSubmitting(true);
     e.preventDefault();
-
     try {
       // Insert the report into the Supabase database
       const { data, error } = await supabase.from("reports").insert([
         {
           created_at: new Date().toISOString(), // Timestamp
+          util_id: utility ? utility.id : "General Report", // Utility ID
           issue_type: issueType, // The issue type selected by the user
           description: description, // The description entered by the user
         },
@@ -67,6 +70,9 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
     } catch (err) {
       console.error("Unexpected error:", err);
     }
+    if (!utility) return;
+    console.log(`Report submitted for utility: ${utility.id}`);
+
   };
 
   return (
@@ -97,11 +103,22 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
                 <p className="font-semibold">Report Submitted!</p>
                 <p className="text-sm text-muted-foreground text-pretty">
                   Thank you for helping keep campus utilities up to date.
+                  setSubmitting(false);
                 </p>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (submitting) return
+                handleSubmit(e)
+              }}
+              className="space-y-4"
+            >
+
+
               <div className="space-y-3">
                 <Label>What's the issue?</Label>
                 <RadioGroup value={issueType} onValueChange={setIssueType}>
