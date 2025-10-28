@@ -3,8 +3,6 @@
 export type UtilityType = "water" | "bike" | "washroom" | "emergency" | "food" | "charging"
 
 
-
-
 // Defines Utility data structure
 export interface Utility {
     id: string
