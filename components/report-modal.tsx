@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 import { createClient } from '@supabase/supabase-js';
+import { id } from "date-fns/locale"
 //import { supabase } from "@/supabaseClient"; // Import the Supabase client
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -43,6 +44,7 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
       // Insert the report into the Supabase database
       const { data, error } = await supabase.from("reports").insert([
         {
+          id: undefined, // Let Supabase auto-generate the ID
           issue_type: issueType, // The issue type selected by the user
           description: description, // The description entered by the user
           created_at: new Date().toISOString(), // Timestamp
