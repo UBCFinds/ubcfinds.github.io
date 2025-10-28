@@ -65,6 +65,8 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
     } catch (err) {
       console.error("Unexpected error:", err);
     }
+
+    return;
   };
 
   return (
