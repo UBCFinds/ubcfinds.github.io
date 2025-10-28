@@ -60,10 +60,10 @@ Add these to your Vercel project or `.env` file:
 
 ## Tech Stack
 
-- Next.js 16
-- React 19
+- Next.js 16.0.0
+- React 18.3.1
 - TypeScript
-- Tailwind CSS v4
+- Tailwind CSS 4.1.9
 - shadcn/ui components
 - Google Maps JavaScript API
 - @react-google-maps/api
