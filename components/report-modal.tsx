@@ -10,6 +10,18 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
+import { createClient } from '@supabase/supabase-js';
+//import { supabase } from "@/supabaseClient"; // Import the Supabase client
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase URL or Key is missing in environment variables.");
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
 interface ReportModalProps {
   utility: { name: string; building: string } | null
   onClose: () => void
@@ -20,13 +32,37 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
   const [description, setDescription] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
-      onClose()
-    }, 2000)
-  }
+
+  /* Add report submission to subabase database
+  */
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // Insert the report into the Supabase database
+      const { data, error } = await supabase.from("reports").insert([
+        {
+          issue_type: issueType, // The issue type selected by the user
+          description: description, // The description entered by the user
+          created_at: new Date().toISOString(), // Timestamp
+        },
+      ]);
+
+      if (error) {
+        console.error("Error submitting report:", error.message);
+        return;
+      }
+
+      console.log("Report submitted successfully:", data);
+
+      // Optionally, show a success message or reset the form
+      //setShowSuccess(true);
+      //setDescription("");
+      //setIssueType("");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
