@@ -295,10 +295,23 @@ export function CampusMap() {
         </div>
       </header>
 
+
+      {/* Toggle Sidebar Button - always visible */}
+      <Button
+        variant="default"
+        size="icon"
+        className={`absolute top-20 z-50 ${sidebarOpen ? "left-[330px]" : "left-[10px]"} text-white-700 hover:text-gray-900 bg-black/70 hover:bg-white/90 border-gray-300 `}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+      >
+        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
+
+
       {/* Sidebar */}
       <aside
         className={cn(
-          "absolute top-16 left-0 bottom-0 z-10 w-80 bg-card border-r border-border transition-transform duration-300 overflow-y-auto",
+          "absolute top-16 left-0 bottom-0 z-20 w-80 bg-card border-r border-border transition-transform duration-300 overflow-y-auto",
           !sidebarOpen && "-translate-x-full",
         )}
       >
@@ -376,6 +389,7 @@ export function CampusMap() {
         </div>
       </aside>
 
+      
       {/* Map */}
       <div
         className={cn(
