@@ -400,7 +400,9 @@ const updateUtilitiesWithReports = async () => {
               //setSelectedUtility(utility)
             }}
             icon={getMarkerIcon(utility)}
-            title={`${utility.name} - ${utility.reports} reports`}
+            
+            // Describe the util on hover
+            title={utility.reports ? utility.reports >=2 ? `${utility.name} - ${utility.reports} reports` :`${utility.name} - ${utility.reports} report` : utility.name}
             />
         ))}
 
