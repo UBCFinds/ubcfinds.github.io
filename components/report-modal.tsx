@@ -32,7 +32,7 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
   const [issueType, setIssueType] = useState("not-working")
   const [description, setDescription] = useState("")
   const [submitted, setSubmitted] = useState(false)
-
+  const [showReportModal, setShowReportModal] = useState(true); // Added state to control modal visibility
 
   /* Add report submission to subabase database
   */
@@ -44,7 +44,6 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
       // Insert the report into the Supabase database
       const { data, error } = await supabase.from("reports").insert([
         {
-          //id: 1, // Let Supabase auto-generate the ID // Removed this for now
           created_at: new Date().toISOString(), // Timestamp
           issue_type: issueType, // The issue type selected by the user
           description: description, // The description entered by the user
@@ -59,14 +58,15 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
       console.log("Report submitted successfully:", data);
 
       // Optionally, show a success message or reset the form
-      //setShowSuccess(true);
-      //setDescription("");
-      //setIssueType("");
+      setSubmitted(true);
+      setDescription("");
+      setIssueType("");
+
+      // Close the modal
+      setShowReportModal(false); // Ensure this state exists and controls the modal visibility
     } catch (err) {
       console.error("Unexpected error:", err);
     }
-
-    return;
   };
 
   return (
