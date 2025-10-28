@@ -10,6 +10,19 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
+import { createClient } from '@supabase/supabase-js';
+import { id } from "date-fns/locale"
+//import { supabase } from "@/supabaseClient"; // Import the Supabase client
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Supabase URL or Key is missing in environment variables.");
+}
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
 interface ReportModalProps {
   utility: { name: string; building: string } | null
   onClose: () => void
@@ -19,14 +32,42 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
   const [issueType, setIssueType] = useState("not-working")
   const [description, setDescription] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(true); // Added state to control modal visibility
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
-      onClose()
-    }, 2000)
-  }
+  /* Add report submission to subabase database
+  */
+  const handleSubmit = async (e: React.FormEvent) => {
+    console.log("Submitting report:", { issueType, description });
+    e.preventDefault();
+
+    try {
+      // Insert the report into the Supabase database
+      const { data, error } = await supabase.from("reports").insert([
+        {
+          created_at: new Date().toISOString(), // Timestamp
+          issue_type: issueType, // The issue type selected by the user
+          description: description, // The description entered by the user
+        },
+      ]);
+
+      if (error) {
+        console.error("Error submitting report:", error.message);
+        return;
+      }
+
+      console.log("Report submitted successfully:", data);
+
+      // Optionally, show a success message or reset the form
+      setSubmitted(true);
+      setDescription("");
+      setIssueType("");
+
+      // Close the modal
+      setShowReportModal(false); // Ensure this state exists and controls the modal visibility
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
