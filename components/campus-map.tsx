@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Droplet, Bike, MapPin, AlertCircle, Coffee, Zap, Menu, X } from "lucide-react"
+// Import all libraries and components
+import { useState, useEffect } from "react"
+import { Search, Droplet, Bike, MapPin, AlertCircle, Coffee, Zap, Menu, X, ZoomIn, ZoomInIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,8 +12,10 @@ import { UtilityDetail } from "@/components/utility-detail"
 import { ReportModal } from "@/components/report-modal"
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api"
 
+// Defines what types of utilities are available and their structure
 type UtilityType = "water" | "bike" | "washroom" | "emergency" | "food" | "charging"
 
+// Defines Utility data structure
 interface Utility {
   id: string
   name: string
@@ -25,6 +28,7 @@ interface Utility {
   lastChecked: string
 }
 
+// Categories for filtering utilities 
 const categories = [
   { id: "water", label: "Water Stations", icon: Droplet, color: "text-blue-400" },
   { id: "bike", label: "Bike Storage", icon: Bike, color: "text-green-400" },
@@ -34,6 +38,9 @@ const categories = [
   { id: "charging", label: "Charging Stations", icon: Zap, color: "text-yellow-400" },
 ]
 
+// Mock data for utilities on campus
+// This is basically just a list of all the utilities with their details
+// Eg: water foundtain in ICICS, bike cage in main mall, etc.
 const mockUtilities: Utility[] = [
   {
     id: "1",
@@ -125,16 +132,19 @@ const mockUtilities: Utility[] = [
   },
 ]
 
+// Map container style and options
 const mapContainerStyle = {
   width: "100%",
   height: "100%",
 }
 
+// Center of UBC Campus
 const ubcCenter = {
   lat: 49.2606,
   lng: -123.246,
 }
 
+// Map options including restrictions to UBC campus area
 const mapOptions = {
   disableDefaultUI: false,
   zoomControl: true,
@@ -161,7 +171,11 @@ const mapOptions = {
   },
 }
 
+// Main CampusMap component 
+// Renders the map, sidebar, and handles state management
 export function CampusMap() {
+
+  // Literally just an fsm 
   const [selectedCategories, setSelectedCategories] = useState<UtilityType[]>([
     "water",
     "bike",
@@ -174,14 +188,41 @@ export function CampusMap() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showReportModal, setShowReportModal] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [map, setMap] = useState<any>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
 
+  // Get user's location on component mount
+  useEffect(() => {
+    // Get the user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          })
+        },
+        (error) => {
+          console.error("Error getting user location:", error)
+        },
+      )
+    } else {
+      console.error("Geolocation is not supported by this browser.")
+    }
+  }, [])
+
+  // Toggle category selection for filtering
+  // If category is already selected, remove it; otherwise, add it
+  // why am I even commenting this lmao (auto-suggested comment btw I had to include it)
   const toggleCategory = (categoryId: UtilityType) => {
     setSelectedCategories((prev) =>
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
     )
   }
 
+  // Filter utilities based on selected categories and search query
+  // Checks if the utility type is in selected categories and if the name or building includes the search query
+  // Only checks the search if the search query is not empty
   const filteredUtilities = mockUtilities.filter(
     (utility) =>
       selectedCategories.includes(utility.type) &&
@@ -194,15 +235,19 @@ export function CampusMap() {
     return categories.find((cat) => cat.id === type)?.color || "text-gray-400"
   }
 
-  const onLoad = (map: any) => {
-    setMap(map)
+  // Loads an instance of the map
+  const onLoad = (mapInstance: google.maps.Map) => {
+    console.log("Map loaded:", mapInstance)
+    setMap(mapInstance)
   }
+
 
   const getMarkerIcon = (utility: Utility) => {
     if (typeof window === "undefined" || !window.google) {
       return undefined
     }
 
+    // Get color based on utility status
     const baseColor = utility.status === "reported" ? "#ef4444" : "#3b82f6"
 
     return {
@@ -213,6 +258,21 @@ export function CampusMap() {
       strokeWeight: 2,
       scale: selectedUtility?.id === utility.id ? 12 : 8,
     }
+  }
+
+
+  // Handle what happens when a utility is selected
+  const handleUtilitySelect = (utility: Utility) => {
+    console.log("Handling utility selection for:", utility)
+    console.log("Current map instance:", map)
+    setSelectedUtility(utility)
+
+    if (map){
+      map.setZoom(15)
+      const panPos = new google.maps.LatLng(utility.position.lat, utility.position.lng+0.003)
+      map.panTo(panPos)
+    }
+    
   }
 
   return (
@@ -287,8 +347,8 @@ export function CampusMap() {
             <div className="space-y-2">
               {filteredUtilities.map((utility) => (
                 <button
-                  key={utility.id}
-                  onClick={() => setSelectedUtility(utility)}
+                  key={utility.id}                  
+                  onClick={() => handleUtilitySelect(utility)}
                   className={cn(
                     "w-full text-left p-3 rounded-lg border transition-colors",
                     selectedUtility?.id === utility.id
@@ -324,24 +384,49 @@ export function CampusMap() {
         )}
       >
         <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}>
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={ubcCenter}
-            zoom={16}
-            options={mapOptions}
-            onLoad={onLoad}
-          >
-            {filteredUtilities.map((utility) => (
-              <Marker
-                key={utility.id}
-                position={utility.position}
-                onClick={() => setSelectedUtility(utility)}
-                icon={getMarkerIcon(utility)}
-                title={utility.name}
-              />
-            ))}
-          </GoogleMap>
-        </LoadScript>
+        <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        center={userLocation || ubcCenter} // Center on user location if available
+        zoom={userLocation ? 17 : 15} // Zoom in closer if user location is available
+        options={mapOptions}
+        onLoad={onLoad}
+      >
+        {/*User's current location marker*/}
+        {userLocation && (
+          <Marker
+            position={userLocation}
+            icon={{
+              url: "/location_icon.png",
+              scaledSize: new window.google.maps.Size(32, 32),
+              anchor: new window.google.maps.Point(16, 16),
+              //fillColor: "#34D399",
+              //fillOpacity: 1,
+              //strokeColor: "#ffffff",
+              //strokeWeight: 2,
+              //scale: 8,
+            }}
+            title="You are here"
+          />
+        )}
+
+        {/* Utility Markers */}
+        {filteredUtilities.map((utility) => (
+          <Marker
+            key={utility.id}
+            position={utility.position}
+            onClick={() => {
+              handleUtilitySelect(utility)
+              //setSelectedUtility(utility)
+            }}
+            icon={getMarkerIcon(utility)}
+            title={utility.name}
+          />
+        ))}
+
+
+
+      </GoogleMap>
+    </LoadScript>
 
         {/* Legend */}
         <Card className="absolute bottom-4 left-4 w-64">
@@ -365,10 +450,13 @@ export function CampusMap() {
       {selectedUtility && (
         <UtilityDetail
           utility={selectedUtility}
-          onClose={() => setSelectedUtility(null)}
+          onClose={() => {
+            setSelectedUtility(null)
+          }}
           onReport={() => {
             setShowReportModal(true)
           }}
+          onGetDirections={() => {}}
         />
       )}
 
