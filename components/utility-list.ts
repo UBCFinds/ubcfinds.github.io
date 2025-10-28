@@ -2,7 +2,7 @@
 // Defines what types of utilities are available and their structure
 export type UtilityType = "water" | "bike" | "washroom" | "emergency" | "food" | "charging"
 
-
+//pushing random
 // Defines Utility data structure
 export interface Utility {
     id: string
