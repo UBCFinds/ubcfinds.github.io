@@ -44,10 +44,10 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
       // Insert the report into the Supabase database
       const { data, error } = await supabase.from("reports").insert([
         {
-          id: undefined, // Let Supabase auto-generate the ID
+          //id: 1, // Let Supabase auto-generate the ID // Removed this for now
+          created_at: new Date().toISOString(), // Timestamp
           issue_type: issueType, // The issue type selected by the user
           description: description, // The description entered by the user
-          created_at: new Date().toISOString(), // Timestamp
         },
       ]);
 
