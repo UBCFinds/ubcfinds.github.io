@@ -48,6 +48,7 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
         {
           created_at: new Date().toISOString(), // Timestamp
           util_id: utility ? utility.id : "General Report", // Utility ID
+          util_name: utility ? utility.name : "General Report", // Utility Name
           issue_type: issueType, // The issue type selected by the user
           description: description, // The description entered by the user
         },
@@ -103,11 +104,10 @@ export function ReportModal({ utility, onClose }: ReportModalProps) {
                 <p className="font-semibold">Report Submitted!</p>
                 <p className="text-sm text-muted-foreground text-pretty">
                   Thank you for helping keep campus utilities up to date.
-                  setSubmitting(false);
                 </p>
               </div>
             </div>
-          ) : (
+            ) : (
 
             <form
               onSubmit={(e) => {

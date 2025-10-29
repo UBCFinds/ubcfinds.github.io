@@ -36,7 +36,13 @@ const categories = [
   { id: "charging", label: "Charging Stations", icon: Zap, color: "text-yellow-400" },
 ]
 
+const colors = {
+  blue: "#3b82f6", // working
+  yellow: "#FFA500", // reported
+  dark_brown: "#393424", // selected outline
+  white: "#FFFFFF", // default outline
 
+}
 
 // Map container style and options
 const mapContainerStyle = {
@@ -97,17 +103,23 @@ export function CampusMap() {
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
   const [utilities, setUtilities] = useState<Utility[]>([])
+  const [showLegend, setShowLegend] = useState(true)
+  const [mapLoaded, setMapLoaded] = useState(false)
+
 
 
   const getUserLocationIcon = () => {
-    if (!window.google?.maps) return undefined;
+    if (typeof window === "undefined" || !window.google || !window.google.maps) {
+      return undefined
+    }
   
     return {
       url: "/location_icon.png",
       scaledSize: new window.google.maps.Size(32, 32),
       anchor: new window.google.maps.Point(16, 16),
-    };
-  };
+    }
+  }
+  
 
 
   // Get user's location on component mount
@@ -198,6 +210,7 @@ const updateUtilitiesWithReports = async () => {
   const onLoad = (mapInstance: google.maps.Map) => {
     console.log("Map loaded:", mapInstance)
     setMap(mapInstance)
+    setMapLoaded(true)
   }
 
 
@@ -208,16 +221,18 @@ const updateUtilitiesWithReports = async () => {
 
     // Get color based on utility status
     //const baseColor = utility.status === "reported" ? "#ef4444" : "#3b82f6"
-    const baseColor = utility.status === "reported" ? "#FFA500" : "#3b82f6"
+    const baseColor = utility.status === "reported" ? colors.yellow : colors.blue
 
     return {
       path: window.google.maps.SymbolPath.CIRCLE,
       fillColor: baseColor,
       fillOpacity: 1,
-      strokeColor: "#ffffff",
+      //strokeColor: "#ffffff",
+      strokeColor: selectedUtility?.id == utility.id ? colors.dark_brown : colors.white, // green outline when selected
       strokeWeight: 2,
-      scale: selectedUtility?.id === utility.id ? 12 : 8,
+      scale: selectedUtility?.id == utility.id ? 12 : 8,
     }
+    
   }
 
   const updateUtil = async (utility: Utility) => {
@@ -257,17 +272,24 @@ const updateUtilitiesWithReports = async () => {
       <header className="absolute top-0 left-0 right-0 z-20 bg-card/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
+             {/* Old toggle button - hidden cuz its duplicated */}
+            {/* <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
+            </Button> */}
             <div>
-              <h1 className="text-xl font-bold text-balance">UBC Campus Finder</h1>
+              <h1 className="text-xl font-bold text-balance">UBC Finds</h1>
               <p className="text-xs text-muted-foreground">We make it easy to find stuff on campus</p>
             </div>
           </div>
-          <Button onClick={() => setShowReportModal(true)} size="sm">
-            Report Issue
+          <Button
+            onClick={() => setShowReportModal(true)}
+            size="icon"
+            className="bg-[#FFA500] hover:bg-[#e59400] text-white rounded-full w-8 h-8 flex items-center justify-center"
+            title="Report Issue"
+          >
+            <span className="text-lg font-bold">!</span>
           </Button>
+
         </div>
       </header>
 
@@ -362,6 +384,10 @@ const updateUtilitiesWithReports = async () => {
               ))}
             </div>
           </div>
+          <footer className="text-center text-xs text-gray-500 py-4 border-t">
+          © {new Date().getFullYear()} UBC Finder. All rights reserved.  
+          This project is student-developed and not officially affiliated with the University of British Columbia.
+        </footer>
         </div>
       </aside>
 
@@ -377,12 +403,13 @@ const updateUtilitiesWithReports = async () => {
         <GoogleMap
         mapContainerStyle={mapContainerStyle}
         center={userLocation || ubcCenter} // Center on user location if available
-        zoom={userLocation ? 17 : 15} // Zoom in closer if user location is available
+        zoom={userLocation ? 16 : 15} // Zoom in closer if user location is available
         options={mapOptions}
         onLoad={onLoad}
+
       >
         {/*User's current location marker*/}
-        {userLocation && (
+        {userLocation && mapLoaded &&(
           <Marker
             position={userLocation}
             icon={getUserLocationIcon()}
@@ -411,22 +438,33 @@ const updateUtilitiesWithReports = async () => {
       </GoogleMap>
     </LoadScript>
 
-        {/* Legend */}
-        <Card className="absolute bottom-4 left-4 w-64">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Map Legend</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-xs">
-              <div className="h-3 w-3 rounded-full bg-primary" />
-              <span>Working</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <div className="h-3 w-3 rounded-full bg-destructive" />
-              <span>Reported Issue</span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Legend */}
+      {showLegend && (
+      <Card className="absolute bottom-4 left-4 w-64">
+        <CardHeader className="pb-3 flex justify-between items-center">
+          <CardTitle className="text-sm">Map Legend</CardTitle>
+          <button
+            onClick={() => setShowLegend(false)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2 text-xs">
+            <div className="h-3 w-3 rounded-full bg-primary" />
+            <span>Working</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "#FFA500" }} />
+            <span>Reported Issue</span>
+          </div>
+        </CardContent>
+      </Card>
+    )}
+
+
+
       </div>
 
       {/* Utility Detail Panel */}
